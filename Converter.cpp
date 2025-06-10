@@ -195,24 +195,23 @@ std::istream& operator>>(std::istream& is, YTracing::TraceEvent& event) {
         return is;
     }
 
-    std::istringstream iss(line);
-    std::string token;
-    std::vector<std::string> tokens;
+    auto first_comma = line.find(',');
+    auto last_comma = line.rfind(',');
 
-    while (std::getline(iss, token, ',')) {
-        tokens.push_back(token);
-    }
-
-    if (tokens.size() != 3) {
+    if (first_comma == std::string::npos || last_comma == std::string::npos ||
+        first_comma == last_comma) {
         std::cerr << "Invalid trace format: " << line << "\n";
         is.setstate(std::ios::failbit);
         return is;
     }
 
     try {
-        uint64_t timestamp = std::stoull(tokens[0]);
-        event.name = tokens[1];
-        event.type = tokens[2] == "B" ? YTracing::EventType::BEGIN : YTracing::EventType::END;
+        uint64_t timestamp = std::stoull(line.substr(0, first_comma));
+        event.name = line.substr(first_comma + 1, last_comma - first_comma - 1);
+        std::string type_str = line.substr(last_comma + 1);
+
+        event.type = type_str == "B" ? YTracing::EventType::BEGIN
+                                      : YTracing::EventType::END;
         event.timestamp = std::chrono::high_resolution_clock::time_point(
             std::chrono::nanoseconds(timestamp));
     } catch (const std::exception& e) {
