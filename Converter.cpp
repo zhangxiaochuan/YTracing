@@ -36,8 +36,8 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
             size_t tid_end = file_name.find('.', tid_start);
             
             uint64_t process_id = std::stoull(file_name.substr(pid_start, pid_end - pid_start));
-            uint64_t tid_value = std::stoull(file_name.substr(tid_start, tid_end - tid_start));
-            std::thread::id thread_id = std::thread::id(tid_value);
+            uint64_t tid_value = std::stoull(file_name.substr(tid_start, tid_end - tid_start), nullptr, 0);
+            std::thread::id thread_id(static_cast<std::thread::native_handle_type>(tid_value));
 
             TraceEvent event;
             event.process_id = process_id;

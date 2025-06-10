@@ -46,9 +46,10 @@ void Collector::flush_to_file() {
     for (auto& [thread_id, thread_events] : events_) {
         // 生成文件名
         std::ostringstream filename;
+        auto tid_hash = std::hash<std::thread::id>{}(thread_id);
         filename << "tracing/trace_"
                  << thread_events.front().process_id << "_"
-                 << thread_id << ".raw";
+                 << tid_hash << ".raw";
         
         // 写入文件
         std::ofstream out(filename.str(), std::ios::app);
