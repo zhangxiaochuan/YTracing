@@ -1,5 +1,4 @@
 #include "Converter.h"
-#include "Visualizer.h"
 #include <fstream>
 #include <filesystem>
 #include <vector>
@@ -37,16 +36,10 @@ int main(int argc, char* argv[]) {
     
     // 生成Perfetto JSON
     std::string json = Converter::instance().to_perfetto_json(visual_events);
-    
-    // 生成HTML
-    std::string html = Visualizer::instance().generate_html(json);
-    
+
     // 保存Perfetto trace文件
     Converter::instance().save_perfetto_trace(trace_dir, visual_events);
-    
-    // 保存HTML文件
-    Visualizer::instance().save_to_file(html, "trace_visualization.html");
-    
-    std::cout << "Visualization saved to trace_visualization.html\n";
+
+    std::cout << "Perfetto trace saved to trace.json\n";
     return 0;
 }

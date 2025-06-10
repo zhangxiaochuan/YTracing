@@ -12,9 +12,7 @@ add_library(YTracing
 )
 
 add_library(YTracingVisualizer
-    Visualizer.h
     Converter.h
-    Visualizer.cpp
     Converter.cpp
 )
 
