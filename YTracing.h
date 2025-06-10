@@ -20,6 +20,7 @@ struct TraceEvent {
     EventType type;
     std::chrono::high_resolution_clock::time_point timestamp;
     std::thread::id thread_id;
+    uint64_t tid_hash;
     uint64_t process_id;
 };
 

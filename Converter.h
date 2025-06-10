@@ -13,7 +13,7 @@ struct VisualEvent {
     std::string category;
     uint64_t start;
     uint64_t end;
-    std::thread::id thread_id;
+    uint64_t tid_hash;
     uint64_t parent_id;  // 父事件ID
     uint64_t event_id;   // 当前事件ID
 };
@@ -36,7 +36,7 @@ private:
     Converter() = default;
 
     // 将事件按线程分组
-    std::map<std::thread::id, std::vector<TraceEvent>> group_by_thread(
+    std::map<uint64_t, std::vector<TraceEvent>> group_by_thread(
         const std::vector<TraceEvent>& events);
 };
 

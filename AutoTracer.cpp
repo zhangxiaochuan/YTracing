@@ -23,6 +23,7 @@ void AutoTracer::record_event(EventType type) {
         type,
         std::chrono::high_resolution_clock::now(),
         std::this_thread::get_id(),
+        std::hash<std::thread::id>{}(std::this_thread::get_id()),
         get_process_id()
     });
 }

@@ -28,20 +28,20 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
                 continue;
             }
 
-            // 解析文件名格式：trace_{pid}_{tid}.raw
+            // 解析文件名格式：trace_{pid}_{tid_hash}.raw
             std::string file_name = entry.path().c_str();
             size_t pid_start = file_name.find('_') + 1;
             size_t pid_end = file_name.find('_', pid_start);
             size_t tid_start = pid_end + 1;
             size_t tid_end = file_name.find('.', tid_start);
-            
+
             uint64_t process_id = std::stoull(file_name.substr(pid_start, pid_end - pid_start));
-            uint64_t tid_value = std::stoull(file_name.substr(tid_start, tid_end - tid_start));
-            std::thread::id thread_id = std::thread::id(tid_value);
+            uint64_t tid_hash = std::stoull(file_name.substr(tid_start, tid_end - tid_start));
 
             TraceEvent event;
             event.process_id = process_id;
-            event.thread_id = thread_id;
+            event.tid_hash = tid_hash;
+            event.thread_id = std::thread::id{};
             size_t event_count = 0;
             while (file >> event) {
                 if (file.fail()) {
@@ -84,7 +84,7 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
         }
     }
 
-    for (auto& [thread_id, thread_events] : grouped_events) {
+    for (auto& [tid_hash, thread_events] : grouped_events) {
         std::map<std::string, uint64_t> begin_times;
         
         for (const auto& event : thread_events) {
@@ -98,7 +98,7 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
                     visual_event.category = "default";
                     visual_event.start = it->second;
                     visual_event.end = event.timestamp.time_since_epoch().count();
-                    visual_event.thread_id = thread_id;
+                    visual_event.tid_hash = tid_hash;
                     visual_events.push_back(visual_event);
                     begin_times.erase(it);
                 }
@@ -127,7 +127,7 @@ std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) 
     // 生成线程元数据
     std::set<uint64_t> thread_ids;
     for (const auto& event : events) {
-        thread_ids.insert(std::hash<std::thread::id>{}(event.thread_id));
+        thread_ids.insert(event.tid_hash);
     }
     
     for (const auto& tid_hash : thread_ids) {
@@ -152,7 +152,7 @@ std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) 
              << "      \"ts\": " << event.start / 1000 << ",\n"  // 转换为微秒
              << "      \"dur\": " << (event.end - event.start) / 1000 << ",\n"  // 持续时间
              << "      \"pid\": 1,\n"
-             << "      \"tid\": " << std::hash<std::thread::id>{}(event.thread_id) << ",\n"
+             << "      \"tid\": " << event.tid_hash << ",\n"
              << "      \"args\": {}\n"
              << "    }";
         
@@ -175,14 +175,14 @@ void Converter::save_perfetto_trace(const std::string& trace_dir,
     }
 }
 
-std::map<std::thread::id, std::vector<TraceEvent>> 
+std::map<uint64_t, std::vector<TraceEvent>>
 Converter::group_by_thread(const std::vector<TraceEvent>& events) {
-    std::map<std::thread::id, std::vector<TraceEvent>> grouped_events;
-    
+    std::map<uint64_t, std::vector<TraceEvent>> grouped_events;
+
     for (const auto& event : events) {
-        grouped_events[event.thread_id].push_back(event);
+        grouped_events[event.tid_hash].push_back(event);
     }
-    
+
     return grouped_events;
 }
 

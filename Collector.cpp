@@ -48,7 +48,7 @@ void Collector::flush_to_file() {
         std::ostringstream filename;
         filename << "tracing/trace_"
                  << thread_events.front().process_id << "_"
-                 << thread_id << ".raw";
+                 << thread_events.front().tid_hash << ".raw";
         
         // 写入文件
         std::ofstream out(filename.str(), std::ios::app);
