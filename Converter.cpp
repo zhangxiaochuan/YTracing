@@ -124,24 +124,27 @@ std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) 
          << "      \"args\": {\"name\": \"YTracing\"}\n"
          << "    },\n";
     
-    // 生成线程元数据
-    std::set<uint64_t> thread_ids;
+    // 生成线程元数据并将 thread::id 映射到 32bit 范围内的 tid
+    std::unordered_map<std::thread::id, uint32_t> tid_map;
+    uint32_t next_tid = 0;
     for (const auto& event : events) {
-        thread_ids.insert(std::hash<std::thread::id>{}(event.thread_id));
+        if (tid_map.find(event.thread_id) == tid_map.end()) {
+            tid_map[event.thread_id] = next_tid++;
+        }
     }
-    
-    for (const auto& tid_hash : thread_ids) {
+
+    for (const auto& [thread_id, tid] : tid_map) {
         json << "    {\n"
              << "      \"ph\": \"M\",\n"
              << "      \"name\": \"thread_name\",\n"
              << "      \"cat\": \"__metadata\",\n"
              << "      \"pid\": 1,\n"
-             << "      \"tid\": " << tid_hash << ",\n"
+             << "      \"tid\": " << tid << ",\n"
              << "      \"ts\": 0,\n"
-             << "      \"args\": {\"name\": \"Thread " << tid_hash << "\"}\n"
+             << "      \"args\": {\"name\": \"Thread " << tid << "\"}\n"
              << "    },\n";
     }
-    
+
     // 生成事件数据
     for (size_t i = 0; i < events.size(); ++i) {
         const auto& event = events[i];
@@ -152,7 +155,7 @@ std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) 
              << "      \"ts\": " << event.start / 1000 << ",\n"  // 转换为微秒
              << "      \"dur\": " << (event.end - event.start) / 1000 << ",\n"  // 持续时间
              << "      \"pid\": 1,\n"
-             << "      \"tid\": " << std::hash<std::thread::id>{}(event.thread_id) << ",\n"
+             << "      \"tid\": " << tid_map[event.thread_id] << ",\n"
              << "      \"args\": {}\n"
              << "    }";
         
