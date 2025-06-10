@@ -44,7 +44,12 @@ std::istream& operator>>(std::istream& is, TraceEvent& event);
 } // namespace YTracing
 
 // 宏定义
+#ifdef TRACING
 #define YTRACING_SCOPE(name) YTracing::AutoTracer __tracer_##__LINE__(name)
 #define YTRACING_FUNCTION() YTRACING_SCOPE(__FUNCTION__)
+#else
+#define YTRACING_SCOPE(name) (void)0
+#define YTRACING_FUNCTION() (void)0
+#endif
 
 #endif // YTRACING_H
