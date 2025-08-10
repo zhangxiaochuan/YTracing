@@ -1,45 +1,125 @@
-# YTracing
+[English](README.md) | [中文](README_zh.md)
 
-## 项目概述
-YTracing 是一个使用 C++17 实现的轻量级事件跟踪库。通过 `AutoTracer` 的 RAII 机制，库在代码运行时自动记录事件的开始和结束时间，并由 `Collector` 在后台线程定期将事件写入 `tracing/` 目录中的原始文件。随后可利用 `Converter` 将数据转换为 Perfetto 兼容的 JSON 格式，供其他工具进一步分析。
+## YTracing
+### Project Overview
 
-## 模块结构图
+**YTracing** is a lightweight, header-only C++ event tracing library implemented in C++17. It leverages the RAII (Resource Acquisition Is Initialization) mechanism through `AutoTracer` to automatically record the start and end times of function calls or scopes. The `Collector` singleton runs in a background thread, periodically writing trace events to `.raw` files in a timestamped directory.
+
+Finally, the `YViewer` command-line tool can be used to convert these raw trace files into a Perfetto-compatible JSON format, which can be loaded into visualization tools like the [Perfetto UI](https://ui.perfetto.dev) for further analysis.
+
+### Features
+
+  * **Lightweight**: Minimal performance overhead, suitable for performance-critical applications.
+  * **Header-Only Usage**: To start tracing, you only need to include `YTracing.h`.
+  * **RAII-based Auto-Tracing**: Simply add a macro to a function or scope to automatically trace its lifetime.
+  * **Timestamped Directories**: Each run creates a unique, timestamped directory (e.g., `tracing_20250810_224500`) to store traces, preventing data from previous runs from being overwritten.
+  * **Perfetto Compatible**: Generates JSON files that can be directly visualized in the Perfetto web UI.
+
+### Project Structure
+
+The project is organized into a clean, modular structure:
+
+```
+YTracing/
+├── CMakeLists.txt          # Root CMake file
+├── src/                    # Core library source code (YTracingCore, YTracingVisualizer)
+├── examples/               # Example program showing how to use the library
+└── tools/                    # Command-line tools like YViewer
+```
+
+### Dependencies
+
+  * **CMake** (version 3.10 or higher)
+  * A C++17 compatible compiler (e.g., GCC, Clang)
+  * **Platform**: Linux / macOS (relies on POSIX APIs like `pthread`)
+
+### Build Instructions
+
+1.  Clone the repository and create a build directory:
+
+    ```bash
+    git clone https://your-repository-url/YTracing.git
+    cd YTracing
+    mkdir build
+    cd build
+    ```
+
+2.  Run CMake and build the project:
+
+    ```bash
+    cmake ..
+    make
+    ```
+
+3.  After a successful build, the following executables will be generated:
+
+      * `build/examples/test`: An example program that generates trace files.
+      * `build/tools/YViewer`: The tool used to convert raw traces to JSON.
+
+### Usage Guide
+
+1.  **Instrument Your Code**: In the code you want to trace, include the `YTracing.h` header and use the provided macros.
+
+      * `YTRACING_FUNCTION()`: Traces the entire scope of the function it's placed in.
+      * `YTRACING_SCOPE("My Custom Scope")`: Traces a specific, named scope.
+
+    <!-- end list -->
+
+    ```cpp
+    #include "YTracing.h"
+    #include <thread>
+
+    void my_function() {
+        YTRACING_FUNCTION(); // Traces this function
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    int main() {
+        YTRACING_SCOPE("main_thread"); // Traces the main scope
+        my_function();
+        return 0;
+    }
+    ```
+
+2.  **Generate Trace Files**: Compile and run your program (or the provided `test` example). It will create a new directory in the location where it was run, named `tracing_YYYYMMDD_HHMMSS/`, containing the raw `.raw` trace files.
+
+3.  **Convert to JSON**: Run the `YViewer` tool, passing the path to the trace directory as an argument.
+
+    ```bash
+    # Assuming your executable is in 'build' and it created a trace dir
+    cd build/examples
+    ./test  # This will create a 'tracing_...' directory here
+
+    # Now, run YViewer from the build directory
+    cd ../tools
+    ./YViewer ../examples/tracing_.../ # Pass the actual directory name
+    ```
+
+    This will generate a `trace.json` file in the current directory (`build/tools/`).
+
+4.  **Visualize**: Open the [Perfetto UI](https://ui.perfetto.dev) in your browser, click "Open trace file", and select the `trace.json` you just created.
+
+### Module Diagram
+
 ```
 +-------------+        +-----------+
 | AutoTracer  | -----> | Collector |
 +-------------+        +-----------+
                               |
                               v
-                        +------------+
-                        | Trace Files|
-                        +------------+
+                   +----------------------+
+                   | Timestamped Log Dir  |
+                   | (trace_....raw files)|
+                   +----------------------+
                               |
                               v
                         +-----------+
-                        | Converter |
+                        |  YViewer  | (uses Converter)
                         +-----------+
+                              |
+                              v
+                        +-------------+
+                        | trace.json  |
+                        +-------------+
 ```
-- **AutoTracer**：在构造和析构时记录事件。可通过 `YTRACING_FUNCTION()` 或 `YTRACING_SCOPE()` 宏使用。
-- **Collector**：单例类，负责收集各线程事件并定期刷写到磁盘。
-- **Converter**：读取原始 trace 文件并导出 Perfetto JSON。
-- **main**：示例程序，演示如何产生 trace 数据。
-- **YViewer**：命令行工具，将 trace 目录转换为 JSON 文件。
 
-## 支持平台
-- Linux / macOS（需要支持 C++17 与 POSIX API 的编译器）
-
-## 编译方式
-```bash
-mkdir build
-cd build
-cmake ..
-make
-```
-编译完成后将生成：
-- `main`：示例程序，运行后在 `tracing/` 目录生成原始 trace 文件。
-- `YViewer`：转换与可视化工具。
-
-## 使用说明
-1. 在需要跟踪的函数或代码块中使用 `YTRACING_FUNCTION()` 或 `YTRACING_SCOPE("名称")` 宏。
-2. 编译并运行你的程序（或仓库中的 `main`），执行结束后会在 `tracing/` 目录得到 `trace_<pid>_<tid>.raw` 文件。
-3. 运行 `./YViewer tracing`（传入原始文件所在目录），工具会生成 `trace.json`。
