@@ -25,9 +25,9 @@ If you have an idea for a new feature or an improvement to an existing one, plea
 #### Submitting Pull Requests
 We love pull requests! To submit one, please follow these steps:
 
-* Fork the repository and create your branch from main.
+* Fork the repository and create your branch from master.
 * Make your changes in your forked repository.
-* Ensure the code compiles and runs. Please test your changes with the provided main example and the YViewer tool.
+* Ensure the code compiles and runs. Please test your changes with the provided master example and the YViewer tool.
 * Adhere to the coding style (see below).
 * Write clear and concise commit messages.
 * Push your changes and open a pull request. Please provide a clear description of the problem and your solution, including the relevant issue number if applicable.
