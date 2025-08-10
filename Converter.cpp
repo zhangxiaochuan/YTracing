@@ -21,7 +21,6 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
     // 读取目录下所有trace文件
     for (const auto& entry : std::filesystem::directory_iterator(trace_dir)) {
         if (entry.path().extension() == ".raw") {
-            std::cout << "Processing file: " << entry.path() << std::endl;
             std::ifstream file(entry.path());
             if (!file.is_open()) {
                 std::cerr << "Failed to open file: " << entry.path() << std::endl;
@@ -53,10 +52,8 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
                 events.push_back(event);
                 event_count++;
             }
-            std::cout << "Read " << event_count << " events from " << entry.path() << std::endl;
         }
     }
-    std::cout << "Total events read: " << events.size() << std::endl;
     
     if (events.empty()) {
         std::cerr << "Warning: No valid events found in trace files\n";
@@ -105,7 +102,6 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
             }
         }
     }
-    std::cout << "visual events count " << visual_events.size() << std::endl;
     return visual_events;
 }
 
@@ -166,7 +162,6 @@ std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) 
     }
     
     json << "  ]\n}";
-    std::cout << json.str() << std::endl;
     return json.str();
 }
 

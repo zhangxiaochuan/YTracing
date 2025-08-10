@@ -25,6 +25,9 @@ private:
     std::unordered_map<std::thread::id, std::vector<TraceEvent>> events_;
     std::thread flush_thread_;
     std::atomic<bool> running_{true};
+
+    std::string trace_dir_; // 存储本次跟踪日志的目录
+    
     void flush_loop();
 };
 
