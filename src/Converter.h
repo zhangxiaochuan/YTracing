@@ -15,6 +15,7 @@ struct VisualEvent {
     uint64_t start;
     uint64_t end;
     std::thread::id thread_id;
+    int32_t process_id;
     uint64_t parent_id;  // 父事件ID
     uint64_t event_id;   // 当前事件ID
 };

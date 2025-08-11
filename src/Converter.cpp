@@ -28,13 +28,13 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
             }
 
             // 解析文件名格式：trace_{pid}_{tid}.raw
-            std::string file_name = entry.path().c_str();
+            std::string file_name = entry.path().stem().c_str();
             size_t pid_start = file_name.find('_') + 1;
             size_t pid_end = file_name.find('_', pid_start);
             size_t tid_start = pid_end + 1;
             size_t tid_end = file_name.find('.', tid_start);
             
-            uint64_t process_id = std::stoull(file_name.substr(pid_start, pid_end - pid_start));
+            int32_t process_id = std::stoull(file_name.substr(pid_start, pid_end - pid_start));
             uint64_t tid_value = std::stoull(file_name.substr(tid_start, tid_end - tid_start));
             std::thread::id thread_id = std::thread::id(tid_value);
 
@@ -96,6 +96,7 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
                     visual_event.start = it->second;
                     visual_event.end = event.timestamp.time_since_epoch().count();
                     visual_event.thread_id = thread_id;
+                    visual_event.process_id = event.process_id;
                     visual_events.push_back(visual_event);
                     begin_times.erase(it);
                 }
@@ -105,43 +106,73 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
     return visual_events;
 }
 
+    
 std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) {
+    if (events.empty()) {
+        return "{\"traceEvents\": []}";
+    }
+
     std::ostringstream json;
     json << "{\n";
     json << "  \"traceEvents\": [\n";
-    
-    // 生成元数据
-    json << "    {\n"
-         << "      \"ph\": \"M\",\n"
-         << "      \"name\": \"process_name\",\n"
-         << "      \"cat\": \"__metadata\",\n"
-         << "      \"pid\": 1,\n"
-         << "      \"ts\": 0,\n"
-         << "      \"args\": {\"name\": \"YTracing\"}\n"
-         << "    },\n";
-    
-    // 生成线程元数据并将 thread::id 映射到 32bit 范围内的 tid
-    std::unordered_map<std::thread::id, uint32_t> tid_map;
-    uint32_t next_tid = 0;
+
+    bool first_entry = true;
+
+    // --- 0. 按时间顺序映射tid ---
+    // 记录每个thread第一次出现的时间
+    std::unordered_map<std::thread::id, uint64_t> thread_first_ts;
     for (const auto& event : events) {
-        if (tid_map.find(event.thread_id) == tid_map.end()) {
-            tid_map[event.thread_id] = next_tid++;
+        if (thread_first_ts.find(event.thread_id) == thread_first_ts.end()) {
+            thread_first_ts[event.thread_id] = event.start; // 第一次出现的时间戳
+        } else {
+            if (event.start < thread_first_ts[event.thread_id]) {
+                thread_first_ts[event.thread_id] = event.start;
+            }
         }
     }
 
-    for (const auto& [thread_id, tid] : tid_map) {
-        json << "    {\n"
-             << "      \"ph\": \"M\",\n"
-             << "      \"name\": \"thread_name\",\n"
-             << "      \"cat\": \"__metadata\",\n"
-             << "      \"pid\": 1,\n"
-             << "      \"tid\": " << tid << ",\n"
-             << "      \"ts\": 0,\n"
-             << "      \"args\": {\"name\": \"Thread " << tid << "\"}\n"
-             << "    },\n";
+    // 把(thread_id, first_ts)放到vector里排序
+    std::vector<std::pair<std::thread::id, uint64_t>> tids_sorted(thread_first_ts.begin(), thread_first_ts.end());
+    std::sort(tids_sorted.begin(), tids_sorted.end(),
+              [](const auto& a, const auto& b) {
+                  return a.second < b.second; // 按首次出现时间升序
+              });
+
+    // 生成tid映射
+    std::unordered_map<std::thread::id, uint32_t> tid_map;
+    uint32_t next_tid = 0;
+    for (const auto& [tid, _] : tids_sorted) {
+        tid_map[tid] = next_tid++;
     }
 
-    // 生成事件数据
+    // --- 1. 动态生成元数据 ---
+    std::map<uint64_t, std::string> process_names;
+    std::map<uint64_t, std::string> thread_names;
+    std::map<uint64_t, uint64_t> thread_to_process_map;
+
+    for(const auto& event : events) {
+        process_names[event.process_id] = "Process " + std::to_string(event.process_id);
+        thread_names[tid_map[event.thread_id]] = "Thread " + std::to_string(tid_map[event.thread_id]);
+        thread_to_process_map[tid_map[event.thread_id]] = event.process_id;
+    }
+
+    // 为每个进程生成 "process_name" 元数据
+    for (const auto& [pid, name] : process_names) {
+        if (!first_entry) json << ",\n";
+        json << "    {\"ph\": \"M\", \"name\": \"process_name\", \"cat\": \"__metadata\", \"pid\": " << pid
+             << ", \"ts\": 0}";
+        first_entry = false;
+    }
+
+    // 为每个线程生成 "thread_name" 元数据
+    for (const auto& [tid, name] : thread_names) {
+        json << ",\n";
+        json << "    {\"ph\": \"M\", \"name\": \"thread_name\", \"cat\": \"__metadata\", \"pid\": " << thread_to_process_map[tid]
+             << ", \"tid\": " << tid << ", \"ts\": 0}";
+    }
+    json << ",\n";
+
+    // --- 2. 生成事件数据 ---
     for (size_t i = 0; i < events.size(); ++i) {
         const auto& event = events[i];
         json << "    {\n"
@@ -149,21 +180,22 @@ std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) 
              << "      \"name\": \"" << event.name << "\",\n"
              << "      \"cat\": \"" << event.category << "\",\n"
              << "      \"ts\": " << event.start / 1000 << ",\n"  // 转换为微秒
-             << "      \"dur\": " << (event.end - event.start) / 1000 << ",\n"  // 持续时间
-             << "      \"pid\": 1,\n"
+             << "      \"dur\": " << (event.end - event.start) / 1000 << ",\n"
+             << "      \"pid\": " << event.process_id << ",\n"
              << "      \"tid\": " << tid_map[event.thread_id] << ",\n"
              << "      \"args\": {}\n"
              << "    }";
-        
+
         if (i < events.size() - 1) {
             json << ",";
         }
         json << "\n";
     }
-    
+
     json << "  ]\n}";
     return json.str();
 }
+
 
 void Converter::save_perfetto_trace(const std::string& trace_dir, 
                                   const std::vector<VisualEvent>& events) {
