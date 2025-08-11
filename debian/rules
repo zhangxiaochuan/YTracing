@@ -1,0 +1,27 @@
+#!/usr/bin/make -f
+
+# 这会启用详细输出，帮助我们调试
+export DH_VERBOSE=1
+
+# 定义一个变量来存放构建目录，方便复用
+BUILD_DIR := debian/build
+
+# 当执行 `dh binary` 时，以下 override_... 目标会被自动调用
+# 这给了我们精确控制每一步的机会
+
+override_dh_auto_configure:
+	# 明确告诉 CMake 在哪里创建构建目录，并传入项目根目录
+	dh_auto_configure --builddirectory=$(BUILD_DIR) --sourcedirectory=.
+
+override_dh_auto_build:
+	# 明确告诉 make 在哪个构建目录里执行
+	dh_auto_build --builddirectory=$(BUILD_DIR)
+
+override_dh_auto_install:
+	# 明确告诉 make 从哪个构建目录安装文件
+	dh_auto_install --builddirectory=$(BUILD_DIR)
+
+# 这是一个通用的“兜底”规则，让 dh 能够处理其他所有它需要处理的步骤
+# （例如 dh_clean, dh_installinit, dh_installdocs 等）
+%:
+	dh $@

@@ -1,0 +1,22 @@
+Source: ytracing
+Section: devel
+Priority: optional
+Maintainer: Xiaochuan Zhang <zhangxiaochuan@outlook.com>
+Build-Depends: debhelper, cmake, g++
+Standards-Version: 4.5.0
+Homepage: https://github.com/zhangxiaochuan/YTracing
+
+Package: ytracing-tools
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Event tracing tools for the YTracing library
+ A collection of command-line tools, like YViewer, for processing
+ YTracing raw trace data.
+
+Package: libytracing-dev
+Architecture: any
+Section: libdevel
+Depends: ytracing-tools (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Development files for the YTracing library
+ This package contains the headers and shared libraries needed to develop
+ applications using YTracing.

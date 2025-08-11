@@ -1,0 +1,37 @@
+if(NOT EXISTS "@MANIFEST@")
+    message(FATAL_ERROR "Cannot find install manifest: @MANIFEST@")
+endif()
+
+# 读取 install_manifest.txt 文件的内容
+file(READ "@MANIFEST@" files)
+string(REGEX REPLACE "\n" ";" files "${files}")
+
+foreach(file ${files})
+    message(STATUS "Uninstalling: ${file}")
+    if(EXISTS "${file}")
+        # 使用 execute_process 来安全地删除文件
+        execute_process(
+            COMMAND @CMAKE_COMMAND@ -E remove -f "${file}"
+            OUTPUT_VARIABLE rm_out
+            ERROR_VARIABLE rm_err
+        )
+        if(NOT "${rm_err}" STREQUAL "")
+            message(FATAL_ERROR "Problem when removing ${file}: ${rm_err}")
+        endif()
+    else()
+        message(STATUS "File not found: ${file}")
+    endif()
+endforeach()
+
+message(STATUS "Attempting to remove empty directories...")
+file(GLOB_RECURSE dirs LIST_DIRECTORIES true "@CMAKE_INSTALL_PREFIX@/YTracing")
+list(REVERSE dirs) # 从最深层目录开始删除
+foreach(dir ${dirs})
+    if(IS_DIRECTORY ${dir} AND IS_SYMLINK ${dir} EQUAL 0)
+        file(GLOB children "${dir}/*")
+        if(NOT children)
+            message(STATUS "Removing empty directory: ${dir}")
+            execute_process(COMMAND @CMAKE_COMMAND@ -E remove_directory "${dir}")
+        endif()
+    endif()
+endforeach()

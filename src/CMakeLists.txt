@@ -4,7 +4,10 @@ add_library(YTracingCore
     AutoTracer.cpp
     Collector.cpp
 )
-
+set_target_properties(YTracingCore PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 target_include_directories(YTracingCore PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
@@ -19,7 +22,10 @@ add_library(YTracingVisualizer
     Converter.h
     Converter.cpp
 )
-
+set_target_properties(YTracingVisualizer PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 target_include_directories(YTracingVisualizer PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
@@ -42,8 +48,6 @@ install(TARGETS YTracingCore YTracingVisualizer
 # 安装所有公开的头文件
 install(FILES
         YTracing.h
-        Collector.h
-        Converter.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/YTracing # 安装到 /usr/local/include/YTracing/
 )
 

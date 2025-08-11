@@ -1,0 +1,8 @@
+usr/include/YTracing
+usr/lib/${DEB_HOST_MULTIARCH}/libYTracingCore.so
+usr/lib/${DEB_HOST_MULTIARCH}/libYTracingCore.so.0
+usr/lib/${DEB_HOST_MULTIARCH}/libYTracingCore.so.0.1.0
+usr/lib/${DEB_HOST_MULTIARCH}/libYTracingVisualizer.so
+usr/lib/${DEB_HOST_MULTIARCH}/libYTracingVisualizer.so.0
+usr/lib/${DEB_HOST_MULTIARCH}/libYTracingVisualizer.so.0.1.0
+usr/lib/${DEB_HOST_MULTIARCH}/cmake/YTracing
