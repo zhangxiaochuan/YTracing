@@ -106,7 +106,7 @@ std::vector<VisualEvent> Converter::convert(const std::string& trace_dir) {
     return visual_events;
 }
 
-    
+
 std::string Converter::to_perfetto_json(const std::vector<VisualEvent>& events) {
     if (events.empty()) {
         return "{\"traceEvents\": []}";
