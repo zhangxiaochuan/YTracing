@@ -1,125 +1,106 @@
 [English](README.md) | [中文](README_zh.md)
 
-## YTracing
-### Project Overview
+# YTracing
 
-**YTracing** is a lightweight, header-only C++ event tracing library implemented in C++17. It leverages the RAII (Resource Acquisition Is Initialization) mechanism through `AutoTracer` to automatically record the start and end times of function calls or scopes. The `Collector` singleton runs in a background thread, periodically writing trace events to `.raw` files in a timestamped directory.
+YTracing is a high-performance C++ event tracing library, supporting performance analysis and visualization in multi-threaded and multi-process environments.
 
-Finally, the `YViewer` command-line tool can be used to convert these raw trace files into a Perfetto-compatible JSON format, which can be loaded into visualization tools like the [Perfetto UI](https://ui.perfetto.dev) for further analysis.
+---
 
-### Features
+## Features
 
-  * **Lightweight**: Minimal performance overhead, suitable for performance-critical applications.
-  * **Header-Only Usage**: To start tracing, you only need to include `YTracing.h`.
-  * **RAII-based Auto-Tracing**: Simply add a macro to a function or scope to automatically trace its lifetime.
-  * **Timestamped Directories**: Each run creates a unique, timestamped directory (e.g., `tracing_20250810_224500`) to store traces, preventing data from previous runs from being overwritten.
-  * **Perfetto Compatible**: Generates JSON files that can be directly visualized in the Perfetto web UI.
+- Lightweight and low-overhead performance tracing  
+- Supports multi-thread and multi-process event recording  
+- Generates visualization data compatible with [Perfetto](https://perfetto.dev/)  
+- Provides CLI tools for data processing and analysis  
 
-### Project Structure
+---
 
-The project is organized into a clean, modular structure:
+## Installation
 
+### Method 1: Install via apt
+
+1. Add the PPA repository:
+```bash
+sudo add-apt-repository ppa:zhangxiaochuan/ytracing
+sudo apt update
+````
+
+2. Install the development package (includes headers and libraries):
+
+```bash
+sudo apt install libytracing-dev
 ```
-YTracing/
-├── CMakeLists.txt          # Root CMake file
-├── src/                    # Core library source code (YTracingCore, YTracingVisualizer)
-├── examples/               # Example program showing how to use the library
-└── tools/                    # Command-line tools like YViewer
+
+### Method 2: Build from source
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/zhangxiaochuan/YTracing.git
+cd YTracing
 ```
 
-### Dependencies
+2. Build and install:
 
-  * **CMake** (version 3.10 or higher)
-  * A C++17 compatible compiler (e.g., GCC, Clang)
-  * **Platform**: Linux / macOS (relies on POSIX APIs like `pthread`)
+```bash
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+```
 
-### Build Instructions
+---
 
-1.  Clone the repository and create a build directory:
+## Usage
 
-    ```bash
-    git clone https://your-repository-url/YTracing.git
-    cd YTracing
-    mkdir build
-    cd build
-    ```
+### Enable tracing
 
-2.  Run CMake and build the project:
+Add the following definition in `CMakeLists.txt` to enable tracing:
 
-    ```bash
-    cmake ..
-    make
-    ```
+```cmake
+add_definitions(-DTRACING=1)
+```
 
-3.  After a successful build, the following executables will be generated:
+Include the header file and use the following two methods to record tracing information:
+```cpp
+#include "YTracing.h"
 
-      * `build/examples/test`: An example program that generates trace files.
-      * `build/tools/YViewer`: The tool used to convert raw traces to JSON.
+void my_function() {
+    // Method 1: YTRACING_FUNCTION
+    // Records the execution time of the entire function (scope is the whole function)
+    YTRACING_FUNCTION();
 
-### Usage Guide
+    // Simulate code execution
+    for (int i = 0; i < 1000000; ++i) {}
 
-1.  **Instrument Your Code**: In the code you want to trace, include the `YTracing.h` header and use the provided macros.
+    {
+        // Method 2: YTRACING_SCOPE("Custom Scope Name")
+        // Records the execution time of a custom code block (scope is limited to the braces)
+        YTRACING_SCOPE("Inner Loop Work");
 
-      * `YTRACING_FUNCTION()`: Traces the entire scope of the function it's placed in.
-      * `YTRACING_SCOPE("My Custom Scope")`: Traces a specific, named scope.
-
-    <!-- end list -->
-
-    ```cpp
-    #include "YTracing.h"
-    #include <thread>
-
-    void my_function() {
-        YTRACING_FUNCTION(); // Traces this function
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        for (int j = 0; j < 500000; ++j) {}
     }
-
-    int main() {
-        YTRACING_SCOPE("main_thread"); // Traces the main scope
-        my_function();
-        return 0;
-    }
-    ```
-
-2.  **Generate Trace Files**: Compile and run your program (or the provided `test` example). It will create a new directory in the location where it was run, named `tracing_YYYYMMDD_HHMMSS/`, containing the raw `.raw` trace files.
-
-3.  **Convert to JSON**: Run the `YViewer` tool, passing the path to the trace directory as an argument.
-
-    ```bash
-    # Assuming your executable is in 'build' and it created a trace dir
-    cd build/examples
-    ./test  # This will create a 'tracing_...' directory here
-
-    # Now, run YViewer from the build directory
-    cd ../tools
-    ./YViewer ../examples/tracing_.../ # Pass the actual directory name
-    ```
-
-    This will generate a `trace.json` file in the current directory (`build/tools/`).
-
-4.  **Visualize**: Open the [Perfetto UI](https://ui.perfetto.dev) in your browser, click "Open trace file", and select the `trace.json` you just created.
-
-### Module Diagram
-
+}
 ```
-+-------------+        +-----------+
-| AutoTracer  | -----> | Collector |
-+-------------+        +-----------+
-                              |
-                              v
-                   +----------------------+
-                   | Timestamped Log Dir  |
-                   | (trace_....raw files)|
-                   +----------------------+
-                              |
-                              v
-                        +-----------+
-                        |  YViewer  | (uses Converter)
-                        +-----------+
-                              |
-                              v
-                        +-------------+
-                        | trace.json  |
-                        +-------------+
+Difference:
+
+* YTRACING_FUNCTION(): Automatically uses the function name as the event name and records the total execution time of the function.
+* YTRACING_SCOPE("Name"): Uses a custom name to record the execution time of a specific code block, suitable for localized performance analysis inside functions.
+
+---
+
+## Integration into other projects
+
+1. Install `libytracing-dev` (see Installation section)
+2. Add the linking in your `CMakeLists.txt`:
+
+```cmake
+find_package(ytracing REQUIRED)
+target_link_libraries(your_target PRIVATE ytracing)
 ```
 
+---
+
+## License
+
+MIT License
