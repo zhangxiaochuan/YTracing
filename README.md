@@ -120,7 +120,7 @@ To make it easier to analyze tracing data visually, **YTracing** provides the `Y
    # 3. Open and visualize:
    Open [Perfetto UI](https://ui.perfetto.dev) in your browser → Click "Open trace file" → Select `trace.json`.
    ```
-
+![](./trace_example.png)
 ---
 
 ## License

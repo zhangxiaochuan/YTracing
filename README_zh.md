@@ -120,7 +120,7 @@ target_link_libraries(your_target PRIVATE YTracing::YTracingCore)
    # 3. 打开并可视化：
    浏览器打开 [Perfetto UI](https://ui.perfetto.dev) → 点击 “Open trace file” → 选择 `trace.json`。
 
-
+![](./trace_example.png)
 ---
 
 ## 许可证
