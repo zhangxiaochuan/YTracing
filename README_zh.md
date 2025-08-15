@@ -54,16 +54,11 @@ sudo make install
 
 ### 启用追踪功能
 
-在 `CMakeLists.txt` 中添加以下定义以启用追踪：
-
-```cmake
-add_definitions(-DTRACING=1)
-```
 
 在代码中引入头文件，并使用以下两种方法记录追踪信息：
 
 ```cpp
-#include "YTracing.h"
+#include <YTracing/YTracing.h>
 
 void my_function() {
     // 方法一：YTRACING_FUNCTION
@@ -87,17 +82,16 @@ void my_function() {
 * YTRACING_FUNCTION()：自动以函数名作为事件名称，追踪整个函数的执行耗时。
 * YTRACING_SCOPE("Name")：以自定义名称追踪特定代码块的执行耗时，适合函数内部的局部性能分析。
 
----
 
-## 集成到第三方项目
-
-1. 安装 `libytracing-dev`（见安装章节）
-2. 在 `CMakeLists.txt` 中添加：
+在 `CMakeLists.txt` 中添加以下定义以启用追踪，并链接YTracing库：
 
 ```cmake
+add_definitions(-DTRACING=1) # 启用追踪功能，去掉这行即可关闭追踪功能
+
 find_package(ytracing REQUIRED)
-target_link_libraries(your_target PRIVATE ytracing)
+target_link_libraries(your_target PRIVATE YTracing::YTracingCore)
 ```
+
 
 ---
 

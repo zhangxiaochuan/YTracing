@@ -55,15 +55,9 @@ sudo make install
 
 ### Enable tracing
 
-Add the following definition in `CMakeLists.txt` to enable tracing:
-
-```cmake
-add_definitions(-DTRACING=1)
-```
-
 Include the header file and use the following two methods to record tracing information:
 ```cpp
-#include "YTracing.h"
+#include <YTracing/YTracing.h>
 
 void my_function() {
     // Method 1: YTRACING_FUNCTION
@@ -87,14 +81,11 @@ Difference:
 * YTRACING_FUNCTION(): Automatically uses the function name as the event name and records the total execution time of the function.
 * YTRACING_SCOPE("Name"): Uses a custom name to record the execution time of a specific code block, suitable for localized performance analysis inside functions.
 
----
-
-## Integration into other projects
-
-1. Install `libytracing-dev` (see Installation section)
-2. Add the linking in your `CMakeLists.txt`:
+Add the following definition in `CMakeLists.txt` to enable tracing and link YTracing lib:
 
 ```cmake
+add_definitions(-DTRACING=1) # enable tracing. Remove this line to disable tracing
+
 find_package(ytracing REQUIRED)
 target_link_libraries(your_target PRIVATE ytracing)
 ```
