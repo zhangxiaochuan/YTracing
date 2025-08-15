@@ -92,6 +92,34 @@ find_package(ytracing REQUIRED)
 target_link_libraries(your_target PRIVATE YTracing::YTracingCore)
 ```
 
+### 使用 **YViewer** 进行追踪可视化
+
+为方便对跟踪数据进行直观分析，**YTracing** 提供了 `YViewer` 命令行工具，帮助你可视化跟踪结果：
+
+1. 完成编译之后，可以执行目标程序，并在工作目录下生成tracing_YYYYMMDD_HHMMSS文件夹，其中包括`.raw`格式的原始追踪数据。
+2. 使用YViewer**将原始 `.raw` 文件转为 Perfetto 格式**  
+   `YViewer` 会将由 YTracing 生成的 `.raw` 跟踪数据转换为可兼容 Perfetto 的 `trace.json` 格式。
+
+3. **在 Perfetto UI 中查看与分析**  
+   在浏览器中打开 [Perfetto Web UI](https://ui.perfetto.dev)，加载生成的 `trace.json` 后，你可以：
+    - 查看函数调用与作用域嵌套关系及其耗时情况；
+    - 通过缩放、平移、名称或时间过滤等操作，精准定位感兴趣的部分；
+    - 在可视化时间线界面中分析并发执行、线程活动与函数执行时序等。
+
+4. **推荐使用流程**
+
+   ```bash
+   # 1. 运行已插桩的程序：
+   ./your_target
+   # 此操作会生成一个包含 .raw 文件的 tracing_YYYYMMDD_HHMMSS 目录。
+
+   # 2. 将跟踪数据转换为 JSON：
+   YViewer tracing_YYYYMMDD_HHMMSS/
+   # 将在tracing_YYYYMMDD_HHMMSS目录下将生成 trace.json 文件。
+
+   # 3. 打开并可视化：
+   浏览器打开 [Perfetto UI](https://ui.perfetto.dev) → 点击 “Open trace file” → 选择 `trace.json`。
+
 
 ---
 
